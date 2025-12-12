@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokenWare Security Suite</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      padding: 12px 14px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .header .version {
+      font-size: 10px;
+      opacity: 0.85;
+    }
+
+    .navigation {
+      background: #1a1a1a;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .nav-dropdown {
+      position: relative;
+      width: 100%;
+    }
+
+    .nav-current {
+      width: 100%;
+      padding: 12px 16px;
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .nav-current:hover {
+      border-color: #22c55e;
+      background: #353535;
+    }
+
+    .nav-current::after {
+      content: '▼';
+      font-size: 10px;
+      color: #22c55e;
+      transition: transform 0.2s;
+    }
+
+    .nav-current.open::after {
+      transform: rotate(180deg);
+    }
+
+    .nav-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      margin-top: 4px;
+      max-height: 0;
+      overflow: hidden;
+      z-index: 1000;
+      transition: max-height 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-menu.open {
+      max-height: 400px;
+    }
+
+    .nav-item {
+      padding: 12px 16px;
+      color: #999;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-item:last-child {
+      border-bottom: none;
+    }
+
+    .nav-item:hover {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+    }
+
+    .nav-item.active {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .nav-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 12px;
+      max-height: 450px;
+      overflow-y: auto;
+    }
+
+    .tab-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .tab-content::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    .tab-content::-webkit-scrollbar-thumb {
+      background: #22c55e;
+      border-radius: 3px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Current Site Security */
+    .site-security-card {
+      background: #2d2d2d;
+      border: 2px solid #22c55e;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .threat-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .threat-level {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .threat-level.SAFE { color: #22c55e; }
+    .threat-level.LOW { color: #fbbf24; }
+    .threat-level.MEDIUM { color: #fb923c; }
+    .threat-level.HIGH { color: #ef4444; }
+    .threat-level.CRITICAL { color: #dc2626; }
+
+    .risk-score {
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .risk-list {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0;
+    }
+
+    .risk-list li {
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      font-size: 12px;
+      border-left: 3px solid #fb923c;
+    }
+
+    .risk-list li.CRITICAL { border-left-color: #dc2626; }
+    .risk-list li.HIGH { border-left-color: #ef4444; }
+    .risk-list li.MEDIUM { border-left-color: #fb923c; }
+    .risk-list li.LOW { border-left-color: #fbbf24; }
+
+    /* Contract Analyzer */
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 6px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px 12px;
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .input-group input::placeholder {
+      color: #666;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px 16px;
+      background: #22c55e;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #16a34a;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #22c55e;
+      border: 1px solid #22c55e;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    /* Scan History */
+    .history-item {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .history-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .history-domain {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      word-break: break-all;
+    }
+
+    .history-threat {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .history-threat.SAFE { background: #22c55e; color: #000; }
+    .history-threat.LOW { background: #fbbf24; color: #000; }
+    .history-threat.MEDIUM { background: #fb923c; color: #000; }
+    .history-threat.HIGH { background: #ef4444; color: #fff; }
+    .history-threat.CRITICAL { background: #dc2626; color: #fff; }
+
+    .history-time {
+      font-size: 11px;
+      color: #666;
+    }
+
+    /* Stats */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-card h3 {
+      font-size: 24px;
+      color: #22c55e;
+      margin-bottom: 4px;
+    }
+
+    .stat-card p {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .stat-card.danger h3 {
+      color: #ef4444;
+    }
+
+    /* Whitelist */
+    .whitelist-item {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .whitelist-domain {
+      font-size: 13px;
+      color: #fff;
+      word-break: break-all;
+    }
+
+    .btn-remove {
+      background: transparent;
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-remove:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    /* Settings */
+    .setting-item {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .setting-item label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: #444;
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      border: none;
+    }
+
+    .toggle.on {
+      background: #22c55e;
+    }
+
+    .toggle span {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 10px;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+      pointer-events: none;
+    }
+
+    .toggle.on span {
+      left: 22px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #22c55e;
+    }
+
+    .error {
+      background: #7f1d1d;
+      border: 1px solid #dc2626;
+      color: #fca5a5;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .success {
+      background: #1f3a1f;
+      border: 1px solid #22c55e;
+      color: #86efac;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      color: #22c55e;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    /* Price display */
+    .price-card {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .price-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .token-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .token-symbol {
+      background: #22c55e;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+
+    .price-big {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .price-change-positive {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .price-change-negative {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .price-row:last-child {
+      border-bottom: none;
+    }
+
+    .price-label {
+      color: #999;
+      font-size: 11px;
+    }
+
+    .price-value {
+      color: #fff;
+      font-weight: 500;
+      font-size: 11px;
+    }
+
+    /* Portfolio */
+    .portfolio-summary {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      border: 2px solid #22c55e;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .portfolio-total {
+      font-size: 24px;
+      font-weight: 700;
+      color: #22c55e;
+      margin-bottom: 3px;
+    }
+
+    .portfolio-pnl {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .position-card {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    /* Trending */
+    .trending-item {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .trending-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #444;
+    }
+
+    .trending-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .trending-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .trending-symbol {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+    }
+
+    .trending-price {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* Alerts */
+    .alert-item {
+      background: #2d2d2d;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .alert-triggered {
+      border-color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>TokenWare Security Suite</h1>
+      <div class="version">v2.0 - Multi-Chain Protection</div>
+    </div>
+  </div>
+
+  <div class="navigation">
+    <div class="nav-dropdown">
+      <div class="nav-current" id="navToggle">
+        <span id="currentSection">💰 Token Prices</span>
+      </div>
+      <div class="nav-menu" id="navMenu">
+        <div class="nav-item active" data-section="prices">
+          <span class="nav-icon">💰</span>
+          <span>Token Prices</span>
+        </div>
+        <div class="nav-item" data-section="portfolio">
+          <span class="nav-icon">📊</span>
+          <span>Portfolio</span>
+        </div>
+        <div class="nav-item" data-section="scanner">
+          <span class="nav-icon">🛡️</span>
+          <span>URL Scanner</span>
+        </div>
+        <div class="nav-item" data-section="contract">
+          <span class="nav-icon">📝</span>
+          <span>Contract Analyzer</span>
+        </div>
+        <div class="nav-item" data-section="alerts">
+          <span class="nav-icon">🔔</span>
+          <span>Price Alerts</span>
+        </div>
+        <div class="nav-item" data-section="stats">
+          <span class="nav-icon">📈</span>
+          <span>Statistics</span>
+        </div>
+        <div class="nav-item" data-section="settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Settings</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Price Tracker Tab -->
+  <div class="tab-content active" id="prices">
+    <h3 class="section-title">Token Prices</h3>
+
+    <div class="input-group">
+      <label>Search Token</label>
+      <select id="priceChainSelect" style="margin-bottom: 8px;">
+        <option value="ethereum">Ethereum</option>
+        <option value="bsc">Binance Smart Chain</option>
+        <option value="polygon">Polygon</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="avalanche">Avalanche</option>
+        <option value="solana">Solana</option>
+        <option value="hedera">Hedera</option>
+      </select>
+      <input type="text" id="priceAddressInput" placeholder="Enter contract address or token ID">
+    </div>
+    <button class="btn" id="getPriceBtn">Get Price</button>
+    <div id="priceResult" style="margin-top: 12px;"></div>
+
+    <h3 class="section-title" style="margin-top: 20px;">Trending Tokens</h3>
+    <div id="trendingTokens">
+      <div class="loading">Loading trending tokens...</div>
+    </div>
+  </div>
+
+  <!-- Portfolio Tab -->
+  <div class="tab-content" id="portfolio">
+    <h3 class="section-title">My Portfolio</h3>
+
+    <div id="portfolioSummary" style="margin-bottom: 16px;"></div>
+
+    <div id="portfolioPositions"></div>
+
+    <h3 class="section-title" style="margin-top: 20px;">Add Position</h3>
+    <div class="input-group">
+      <select id="portfolioChainSelect" style="margin-bottom: 8px;">
+        <option value="ethereum">Ethereum</option>
+        <option value="bsc">BSC</option>
+        <option value="polygon">Polygon</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="avalanche">Avalanche</option>
+        <option value="solana">Solana</option>
+        <option value="hedera">Hedera</option>
+      </select>
+      <input type="text" id="portfolioAddressInput" placeholder="Contract Address" style="margin-bottom: 8px;">
+      <input type="text" id="portfolioSymbolInput" placeholder="Symbol (e.g. ETH)" style="margin-bottom: 8px;">
+      <input type="number" id="portfolioAmountInput" placeholder="Amount" step="any" style="margin-bottom: 8px;">
+      <input type="number" id="portfolioAvgPriceInput" placeholder="Avg Buy Price" step="any">
+    </div>
+    <button class="btn" id="addToPortfolioBtn">Add to Portfolio</button>
+  </div>
+
+  <!-- URL Scanner Tab -->
+  <div class="tab-content" id="scanner">
+    <h3 class="section-title">Current Site Security</h3>
+    <div id="currentSiteSecurity">
+      <div class="loading">Analyzing current site...</div>
+    </div>
+
+    <h3 class="section-title" style="margin-top: 20px;">Scan URL</h3>
+    <div class="input-group">
+      <input type="text" id="urlInput" placeholder="Enter URL to analyze">
+    </div>
+    <button class="btn" id="scanUrlBtn">Scan URL</button>
+    <div id="urlScanResult" style="margin-top: 12px;"></div>
+  </div>
+
+  <!-- Contract Analyzer Tab -->
+  <div class="tab-content" id="contract">
+    <h3 class="section-title">Smart Contract Analyzer</h3>
+
+    <div class="input-group">
+      <label>Blockchain Network</label>
+      <select id="chainSelect">
+        <option value="ethereum">Ethereum</option>
+        <option value="bsc">Binance Smart Chain</option>
+        <option value="polygon">Polygon</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="avalanche">Avalanche</option>
+        <option value="solana">Solana</option>
+        <option value="hedera">Hedera</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>Contract Address / Token ID</label>
+      <input type="text" id="contractInput" placeholder="0x... or 0.0.12345">
+    </div>
+
+    <button class="btn" id="analyzeContractBtn">Analyze Contract</button>
+    <div id="contractResult" style="margin-top: 12px;"></div>
+  </div>
+
+  <!-- Price Alerts Tab -->
+  <div class="tab-content" id="alerts">
+    <h3 class="section-title">Price Alerts</h3>
+
+    <div id="alertsList"></div>
+
+    <h3 class="section-title" style="margin-top: 20px;">Create Alert</h3>
+    <div class="input-group">
+      <select id="alertChainSelect" style="margin-bottom: 8px;">
+        <option value="ethereum">Ethereum</option>
+        <option value="bsc">BSC</option>
+        <option value="polygon">Polygon</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="avalanche">Avalanche</option>
+        <option value="solana">Solana</option>
+        <option value="hedera">Hedera</option>
+      </select>
+      <input type="text" id="alertAddressInput" placeholder="Contract Address" style="margin-bottom: 8px;">
+      <input type="text" id="alertSymbolInput" placeholder="Symbol" style="margin-bottom: 8px;">
+      <select id="alertTypeSelect" style="margin-bottom: 8px;">
+        <option value="above">Price Above</option>
+        <option value="below">Price Below</option>
+        <option value="percent_change">Percent Change</option>
+      </select>
+      <input type="number" id="alertTargetInput" placeholder="Target Price" step="any">
+    </div>
+    <button class="btn" id="createAlertBtn">Create Alert</button>
+  </div>
+
+  <!-- Stats Tab -->
+  <div class="tab-content" id="stats">
+    <h3 class="section-title">Today's Statistics</h3>
+    <div class="stat-grid" id="statsGrid"></div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div class="tab-content" id="settings">
+    <h3 class="section-title">Security Settings</h3>
+
+    <div class="setting-item">
+      <label>Auto-Scan Websites</label>
+      <button class="toggle on" id="scanToggle"><span></span></button>
+    </div>
+
+    <div class="setting-item">
+      <label>Show Floating Badge</label>
+      <button class="toggle on" id="badgeToggle"><span></span></button>
+    </div>
+
+    <div class="setting-item">
+      <label>Show Security Warnings</label>
+      <button class="toggle on" id="warningsToggle"><span></span></button>
+    </div>
+
+    <div class="setting-item">
+      <label>Notification Sound</label>
+      <button class="toggle on" id="soundToggle"><span></span></button>
+    </div>
+
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(34, 197, 94, 0.2);">
+      <button class="btn btn-secondary" id="clearDataBtn">Clear All Data</button>
+    </div>
+
+    <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(34, 197, 94, 0.1);">
+      <div style="font-size: 11px; color: #666;">
+        TokenWare v2.0.0<br>
+        Multi-Chain Security Suite<br>
+        by @Snipeware
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
