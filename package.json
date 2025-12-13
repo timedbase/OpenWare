@@ -1,0 +1,27 @@
+{
+  "name": "openware",
+  "version": "2.0.0",
+  "description": "Multi-chain cryptocurrency security analyzer - Detect scams, phishing, and malicious contracts across all blockchains",
+  "author": "@Snipeware",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "web3",
+    "security",
+    "crypto",
+    "blockchain",
+    "ethereum",
+    "solana",
+    "hedera",
+    "phishing",
+    "scam-detection"
+  ]
+}

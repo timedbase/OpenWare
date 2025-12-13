@@ -1,16 +1,99 @@
-// TokenWare Price Tracking Module
+// OpenWare Price Tracking Module
 // Real-time cryptocurrency price monitoring and alerts
 
+interface PriceData {
+  address: string;
+  chain: string;
+  symbol: string;
+  name: string;
+  price: number;
+  priceChange: {
+    '5m'?: number;
+    '1h'?: number;
+    '6h'?: number;
+    '24h'?: number;
+    '7d'?: number;
+    '30d'?: number;
+  };
+  volume: {
+    '5m'?: number;
+    '1h'?: number;
+    '6h'?: number;
+    '24h'?: number;
+  };
+  liquidity: number;
+  marketCap: number;
+  fdv: number;
+  pairAddress?: string;
+  dexName?: string;
+  url?: string;
+  ath?: number;
+  atl?: number;
+  circulatingSupply?: number;
+  totalSupply?: number;
+  timestamp: number;
+  source: string;
+}
+
+interface TokenRequest {
+  address: string;
+  chain: string;
+}
+
+interface Alert {
+  id: string;
+  address: string;
+  chain: string;
+  symbol: string;
+  type: 'above' | 'below' | 'percent_change';
+  targetPrice: number;
+  basePrice: number;
+  percentThreshold: number;
+  triggered: boolean;
+  createdAt: string;
+}
+
+interface Holding {
+  address: string;
+  chain: string;
+  symbol: string;
+  amount: number;
+  avgPrice: number;
+}
+
+interface Position extends Holding {
+  currentPrice: number;
+  currentValue: number;
+  costBasis: number;
+  pnl: number;
+  pnlPercent: number;
+  priceChange24h: number;
+}
+
+interface PortfolioValue {
+  totalValue: number;
+  totalCost: number;
+  totalPnl: number;
+  totalPnlPercent: number;
+  positions: Position[];
+  lastUpdated: number;
+}
+
 class PriceTracker {
+  private priceCache: Map<string, PriceData>;
+  private cacheExpiry: number;
+  private alertsEnabled: boolean;
+  private apis: any;
+
   constructor() {
-    this.priceCache = new Map(); // address -> price data
+    this.priceCache = new Map();
     this.cacheExpiry = 30000; // 30 seconds
     this.alertsEnabled = true;
     this.apis = this.initializeAPIs();
   }
 
   // Initialize price API endpoints
-  initializeAPIs() {
+  private initializeAPIs() {
     return {
       dexscreener: {
         base: 'https://api.dexscreener.com/latest',
@@ -45,7 +128,7 @@ class PriceTracker {
   }
 
   // Fetch token price from multiple sources with rotation
-  async getTokenPrice(address, chain = 'ethereum') {
+  async getTokenPrice(address: string, chain: string = 'ethereum'): Promise<PriceData | null> {
     const cacheKey = `${chain}:${address}`;
 
     // Check cache first
@@ -67,7 +150,7 @@ class PriceTracker {
           console.log(`Price fetched from ${source.name}`);
           return data;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.warn(`${source.name} failed:`, error.message);
         // Continue to next source
       }
@@ -78,7 +161,7 @@ class PriceTracker {
   }
 
   // Fetch from Dexscreener
-  async fetchFromDexscreener(address, chain) {
+  private async fetchFromDexscreener(address: string, chain: string): Promise<PriceData | null> {
     try {
       const url = `${this.apis.dexscreener.base}/dex/tokens/${address}`;
       const response = await fetch(url);
@@ -90,8 +173,8 @@ class PriceTracker {
 
       // Get the most liquid pair
       const pair = data.pairs
-        .filter(p => p.chainId === this.getChainId(chain))
-        .sort((a, b) => (parseFloat(b.liquidity?.usd) || 0) - (parseFloat(a.liquidity?.usd) || 0))[0];
+        .filter((p: any) => p.chainId === this.getChainId(chain))
+        .sort((a: any, b: any) => (parseFloat(b.liquidity?.usd) || 0) - (parseFloat(a.liquidity?.usd) || 0))[0];
 
       if (!pair) return null;
 
@@ -129,9 +212,9 @@ class PriceTracker {
   }
 
   // Fetch from GeckoTerminal
-  async fetchFromGeckoTerminal(address, chain) {
+  private async fetchFromGeckoTerminal(address: string, chain: string): Promise<PriceData | null> {
     try {
-      const networkMap = {
+      const networkMap: Record<string, string> = {
         'ethereum': 'eth',
         'bsc': 'bsc',
         'polygon': 'polygon_pos',
@@ -181,7 +264,7 @@ class PriceTracker {
   }
 
   // Fetch from CoinGecko
-  async fetchFromCoinGecko(address, chain) {
+  private async fetchFromCoinGecko(address: string, chain: string): Promise<PriceData | null> {
     try {
       const platformId = this.getCoinGeckoPlatformId(chain);
       if (!platformId) return null;
@@ -225,7 +308,7 @@ class PriceTracker {
   }
 
   // Get multiple token prices at once
-  async getBatchPrices(tokens) {
+  async getBatchPrices(tokens: TokenRequest[]): Promise<any[]> {
     const promises = tokens.map(({ address, chain }) =>
       this.getTokenPrice(address, chain)
     );
@@ -240,7 +323,7 @@ class PriceTracker {
   }
 
   // Get trending tokens
-  async getTrendingTokens() {
+  async getTrendingTokens(): Promise<any[]> {
     try {
       const url = `${this.apis.coingecko.base}/search/trending`;
       const response = await fetch(url);
@@ -249,7 +332,7 @@ class PriceTracker {
 
       const data = await response.json();
 
-      return data.coins?.slice(0, 10).map(item => ({
+      return data.coins?.slice(0, 10).map((item: any) => ({
         id: item.item.id,
         symbol: item.item.symbol,
         name: item.item.name,
@@ -266,24 +349,9 @@ class PriceTracker {
     }
   }
 
-  // Get top gainers/losers
-  async getTopMovers() {
-    try {
-      // This would require a paid API or web scraping
-      // Placeholder for future implementation
-      return {
-        gainers: [],
-        losers: []
-      };
-    } catch (error) {
-      console.error('Top movers fetch error:', error);
-      return { gainers: [], losers: [] };
-    }
-  }
-
   // Calculate price alerts
-  checkPriceAlerts(currentPrice, alerts) {
-    const triggered = [];
+  checkPriceAlerts(currentPrice: number, alerts: Alert[]): Alert[] {
+    const triggered: Alert[] = [];
 
     for (const alert of alerts) {
       let shouldTrigger = false;
@@ -310,10 +378,10 @@ class PriceTracker {
   }
 
   // Calculate portfolio value
-  calculatePortfolioValue(holdings, prices) {
+  calculatePortfolioValue(holdings: Holding[], prices: any[]): PortfolioValue {
     let totalValue = 0;
     let totalCost = 0;
-    const positions = [];
+    const positions: Position[] = [];
 
     for (const holding of holdings) {
       const priceData = prices.find(p =>
@@ -351,24 +419,8 @@ class PriceTracker {
     };
   }
 
-  // Historical price data (simplified)
-  async getHistoricalPrices(address, chain, days = 7) {
-    try {
-      // This would require historical data APIs
-      // Placeholder for Chart.js integration
-      return {
-        prices: [], // Array of [timestamp, price]
-        volumes: [], // Array of [timestamp, volume]
-        marketCaps: [] // Array of [timestamp, marketCap]
-      };
-    } catch (error) {
-      console.error('Historical data fetch error:', error);
-      return null;
-    }
-  }
-
   // Cache management
-  getCachedPrice(key) {
+  private getCachedPrice(key: string): PriceData | null {
     const cached = this.priceCache.get(key);
     if (!cached) return null;
 
@@ -381,23 +433,23 @@ class PriceTracker {
     return cached;
   }
 
-  cachePrice(key, data) {
+  private cachePrice(key: string, data: PriceData): void {
     this.priceCache.set(key, data);
 
     // Cleanup old cache entries
     if (this.priceCache.size > 100) {
       const oldestKey = this.priceCache.keys().next().value;
-      this.priceCache.delete(oldestKey);
+      if (oldestKey) this.priceCache.delete(oldestKey);
     }
   }
 
-  clearCache() {
+  clearCache(): void {
     this.priceCache.clear();
   }
 
   // Helper: Get Dexscreener chain ID
-  getChainId(chain) {
-    const chainIds = {
+  private getChainId(chain: string): string {
+    const chainIds: Record<string, string> = {
       'ethereum': 'ethereum',
       'bsc': 'bsc',
       'polygon': 'polygon',
@@ -410,8 +462,8 @@ class PriceTracker {
   }
 
   // Helper: Get CoinGecko platform ID
-  getCoinGeckoPlatformId(chain) {
-    const platforms = {
+  private getCoinGeckoPlatformId(chain: string): string | null {
+    const platforms: Record<string, string> = {
       'ethereum': 'ethereum',
       'bsc': 'binance-smart-chain',
       'polygon': 'polygon-pos',
@@ -423,7 +475,7 @@ class PriceTracker {
   }
 
   // Format price for display
-  formatPrice(price) {
+  formatPrice(price: number): string {
     if (price >= 1000) return '$' + price.toLocaleString(undefined, { maximumFractionDigits: 2 });
     if (price >= 1) return '$' + price.toFixed(2);
     if (price >= 0.01) return '$' + price.toFixed(4);
@@ -432,7 +484,7 @@ class PriceTracker {
   }
 
   // Format market cap
-  formatMarketCap(value) {
+  formatMarketCap(value: number): string {
     if (value >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
     if (value >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
     if (value >= 1e3) return '$' + (value / 1e3).toFixed(2) + 'K';
@@ -440,7 +492,7 @@ class PriceTracker {
   }
 
   // Format percentage change with color
-  formatPriceChange(percent) {
+  formatPriceChange(percent: number): { text: string; color: string } {
     const sign = percent >= 0 ? '+' : '';
     return {
       text: sign + percent.toFixed(2) + '%',
@@ -453,3 +505,5 @@ class PriceTracker {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PriceTracker;
 }
+
+export { PriceTracker, PriceData, Alert, Holding, Position, PortfolioValue };

@@ -1,7 +1,52 @@
-// TokenWare Security Detection Engine
+// OpenWare Security Detection Engine
 // Multi-chain threat detection and analysis
 
+interface Risk {
+  type: string;
+  severity: string;
+  message: string;
+}
+
+interface Analysis {
+  url?: string;
+  domain?: string;
+  address?: string;
+  chain?: string;
+  threatLevel: string;
+  riskScore: number;
+  risks: Risk[];
+  timestamp: string;
+  contractData?: ContractData;
+}
+
+interface ContractData {
+  verified: boolean;
+  liquidity: number;
+  price: number;
+  marketCap: number;
+  volume24h: number;
+  priceChange24h: number;
+  createdDaysAgo: number | null;
+  topHolderPercentage: number | null;
+  isHoneypot: boolean;
+  ownershipRenounced: boolean | null;
+  dexName?: string;
+  pairAddress?: string;
+}
+
+interface ChainAPI {
+  rpc?: string;
+  explorer?: string;
+  dexscreener?: string;
+  mirror?: string;
+}
+
 class SecurityEngine {
+  private phishingDomains: Set<string>;
+  private scamPatterns: RegExp[];
+  private suspiciousKeywords: string[];
+  private chainAPIs: Record<string, ChainAPI>;
+
   constructor() {
     this.phishingDomains = new Set();
     this.scamPatterns = this.initializeScamPatterns();
@@ -10,7 +55,7 @@ class SecurityEngine {
   }
 
   // Initialize known scam patterns
-  initializeScamPatterns() {
+  private initializeScamPatterns(): RegExp[] {
     return [
       // Phishing patterns
       /claim.*airdrop/i,
@@ -38,7 +83,7 @@ class SecurityEngine {
   }
 
   // Initialize suspicious keywords
-  initializeSuspiciousKeywords() {
+  private initializeSuspiciousKeywords(): string[] {
     return [
       'airdrop', 'giveaway', 'free tokens', 'claim now',
       'limited time', 'urgent action', 'verify wallet',
@@ -51,7 +96,7 @@ class SecurityEngine {
   }
 
   // Initialize blockchain API endpoints
-  initializeChainAPIs() {
+  private initializeChainAPIs(): Record<string, ChainAPI> {
     return {
       ethereum: {
         rpc: 'https://eth.llamarpc.com',
@@ -90,8 +135,8 @@ class SecurityEngine {
   }
 
   // Analyze URL for threats
-  async analyzeURL(url) {
-    const risks = [];
+  async analyzeURL(url: string): Promise<Analysis> {
+    const risks: Risk[] = [];
     let riskScore = 0;
     let threatLevel = 'SAFE';
 
@@ -170,7 +215,7 @@ class SecurityEngine {
   }
 
   // Check if domain is known phishing site
-  isKnownPhishingDomain(domain) {
+  private isKnownPhishingDomain(domain: string): boolean {
     // This would ideally integrate with a real phishing database API
     const knownPhishing = [
       'metamask-verify.com', 'opensea-claim.com', 'binance-secure.com',
@@ -182,8 +227,8 @@ class SecurityEngine {
   }
 
   // Check for domain pattern anomalies
-  checkDomainPatterns(domain) {
-    const risks = [];
+  private checkDomainPatterns(domain: string): Risk[] {
+    const risks: Risk[] = [];
 
     // Excessive hyphens
     if ((domain.match(/-/g) || []).length > 2) {
@@ -199,7 +244,7 @@ class SecurityEngine {
     const cryptoKeywords = ['metamask', 'opensea', 'uniswap', 'pancakeswap', 'binance', 'coinbase', 'crypto', 'wallet'];
     for (const keyword of cryptoKeywords) {
       if (domain.includes(keyword)) {
-        const officialDomains = {
+        const officialDomains: Record<string, string[]> = {
           'metamask': ['metamask.io'],
           'opensea': ['opensea.io'],
           'uniswap': ['uniswap.org', 'app.uniswap.org'],
@@ -218,8 +263,8 @@ class SecurityEngine {
   }
 
   // Check for typosquatting of popular crypto sites
-  checkTyposquatting(domain) {
-    const risks = [];
+  private checkTyposquatting(domain: string): Risk[] {
+    const risks: Risk[] = [];
     const popularSites = [
       { name: 'metamask.io', variations: ['metamask.com', 'metmask.io', 'metamsk.io', 'metamask.app'] },
       { name: 'opensea.io', variations: ['opensea.com', 'opnsea.io', 'opensae.io', 'open-sea.io'] },
@@ -238,8 +283,8 @@ class SecurityEngine {
   }
 
   // Analyze smart contract
-  async analyzeContract(address, chain = 'ethereum') {
-    const risks = [];
+  async analyzeContract(address: string, chain: string = 'ethereum'): Promise<Analysis> {
+    const risks: Risk[] = [];
     let riskScore = 0;
 
     try {
@@ -335,7 +380,7 @@ class SecurityEngine {
   }
 
   // Validate address format for different chains
-  isValidAddress(address, chain) {
+  private isValidAddress(address: string, chain: string): boolean {
     switch (chain) {
       case 'ethereum':
       case 'bsc':
@@ -353,7 +398,7 @@ class SecurityEngine {
   }
 
   // Fetch contract data from blockchain
-  async fetchContractData(address, chain) {
+  private async fetchContractData(address: string, chain: string): Promise<ContractData | null> {
     try {
       // Try to get data from Dexscreener first (works for most chains)
       const dexData = await this.fetchDexscreenerData(address, chain);
@@ -366,9 +411,9 @@ class SecurityEngine {
   }
 
   // Fetch data from Dexscreener
-  async fetchDexscreenerData(address, chain) {
+  private async fetchDexscreenerData(address: string, chain: string): Promise<ContractData | null> {
     try {
-      const chainIds = {
+      const chainIds: Record<string, string> = {
         'ethereum': 'ethereum',
         'bsc': 'bsc',
         'polygon': 'polygon',
@@ -389,7 +434,7 @@ class SecurityEngine {
       if (!data.pairs || data.pairs.length === 0) return null;
 
       // Get the most liquid pair
-      const pair = data.pairs.sort((a, b) =>
+      const pair = data.pairs.sort((a: any, b: any) =>
         (parseFloat(b.liquidity?.usd) || 0) - (parseFloat(a.liquidity?.usd) || 0)
       )[0];
 
@@ -414,8 +459,8 @@ class SecurityEngine {
   }
 
   // Analyze page content for threats
-  analyzePageContent(content) {
-    const risks = [];
+  analyzePageContent(content: string): { risks: Risk[]; riskScore: number } {
+    const risks: Risk[] = [];
     let riskScore = 0;
 
     const lowerContent = content.toLowerCase();
@@ -453,11 +498,11 @@ class SecurityEngine {
   }
 
   // Extract crypto addresses from text
-  extractAddresses(text) {
+  extractAddresses(text: string): { ethereum: string[]; solana: string[]; hedera: string[] } {
     const addresses = {
-      ethereum: [],
-      solana: [],
-      hedera: []
+      ethereum: [] as string[],
+      solana: [] as string[],
+      hedera: [] as string[]
     };
 
     // Ethereum/EVM addresses
@@ -488,3 +533,5 @@ class SecurityEngine {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SecurityEngine;
 }
+
+export { SecurityEngine, Risk, Analysis, ContractData };

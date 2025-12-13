@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "TokenWare - Web3 Security Suite",
+  "name": "OpenWare - Web3 Security Suite",
   "version": "2.0.0",
   "description": "Multi-chain crypto security analyzer - Detect scams, phishing, and malicious contracts across all blockchains",
   "author": "@Snipeware",
@@ -18,19 +18,19 @@
     "http://*/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-security.js"],
+      "js": ["dist/content-security.js"],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "TokenWare - Web3 Security Suite"
+    "default_title": "OpenWare - Web3 Security Suite"
   },
   "icons": {
     "16": "images/icon-16.png",

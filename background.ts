@@ -1,7 +1,74 @@
-// TokenWare Background Service Worker - v2.0
+// OpenWare Background Service Worker - v2.0
 // Multi-chain security and threat detection
 
+import type { SecurityEngine } from './security-engine';
+import type { PriceTracker } from './price-tracker';
+
+// Types
+interface Analysis {
+  url?: string;
+  domain?: string;
+  address?: string;
+  chain?: string;
+  threatLevel: string;
+  riskScore: number;
+  risks: Risk[];
+  timestamp: string;
+  contractData?: ContractData;
+}
+
+interface Risk {
+  type: string;
+  severity: string;
+  message: string;
+}
+
+interface ContractData {
+  verified?: boolean;
+  liquidity?: number;
+  price?: number;
+  marketCap?: number;
+  volume24h?: number;
+  priceChange24h?: number;
+  createdDaysAgo?: number | null;
+  topHolderPercentage?: number | null;
+  isHoneypot?: boolean;
+  ownershipRenounced?: boolean | null;
+  dexName?: string;
+  pairAddress?: string;
+}
+
+interface Message {
+  action: string;
+  [key: string]: any;
+}
+
+interface TokenInfo {
+  tokenId: string;
+  name: string;
+  symbol: string;
+  decimals: string;
+  totalSupply: string;
+  initialSupply: string;
+  treasury: string;
+  memo: string;
+  evm_address?: string;
+}
+
+interface MarketData {
+  price: string;
+  priceChange24h: number;
+  liquidity: string;
+  volume24h: string;
+  marketCap: string;
+  fdv: string;
+  pairAddress: string;
+  dexName: string;
+}
+
 // Import security engine and price tracker (using importScripts for service worker)
+declare const SecurityEngine: new () => any;
+declare const PriceTracker: new () => any;
 importScripts('security-engine.js');
 importScripts('price-tracker.js');
 
@@ -9,7 +76,7 @@ const securityEngine = new SecurityEngine();
 const priceTracker = new PriceTracker();
 
 // Helper function to fetch with timeout
-async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout: number = 10000): Promise<any> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -26,7 +93,7 @@ async function fetchWithTimeout(url, options = {}, timeout = 10000) {
 }
 
 // Analyze URL for threats
-async function analyzeURL(url) {
+async function analyzeURL(url: string): Promise<Analysis> {
   try {
     const analysis = await securityEngine.analyzeURL(url);
 
@@ -55,7 +122,7 @@ async function analyzeURL(url) {
 }
 
 // Analyze smart contract
-async function analyzeContract(address, chain = 'ethereum') {
+async function analyzeContract(address: string, chain: string = 'ethereum'): Promise<Analysis> {
   try {
     const analysis = await securityEngine.analyzeContract(address, chain);
 
@@ -75,7 +142,7 @@ async function analyzeContract(address, chain = 'ethereum') {
 }
 
 // Scan page for crypto addresses
-async function scanPageForAddresses(text, url) {
+async function scanPageForAddresses(text: string, url: string): Promise<any> {
   try {
     const addresses = securityEngine.extractAddresses(text);
 
@@ -97,7 +164,7 @@ async function scanPageForAddresses(text, url) {
 }
 
 // Save scan to history
-async function saveScanHistory(analysis) {
+async function saveScanHistory(analysis: Analysis): Promise<void> {
   const { scanHistory = [] } = await chrome.storage.local.get('scanHistory');
 
   const newScan = {
@@ -110,7 +177,7 @@ async function saveScanHistory(analysis) {
 }
 
 // Update stats
-async function updateStats(statKey) {
+async function updateStats(statKey: string): Promise<void> {
   const { stats = {} } = await chrome.storage.local.get('stats');
 
   const today = new Date().toISOString().split('T')[0];
@@ -133,7 +200,7 @@ async function updateStats(statKey) {
 }
 
 // Update extension badge
-function updateBadge(count) {
+function updateBadge(count: number): void {
   if (count > 0) {
     chrome.action.setBadgeText({ text: count.toString() });
     chrome.action.setBadgeBackgroundColor({ color: '#dc2626' });
@@ -143,7 +210,7 @@ function updateBadge(count) {
 }
 
 // Show browser notification
-async function showNotification({ title, message, iconUrl }) {
+async function showNotification({ title, message, iconUrl }: { title: string; message: string; iconUrl: string }): Promise<void> {
   const { settings = {} } = await chrome.storage.local.get('settings');
 
   if (settings.notificationSound === false) return;
@@ -165,7 +232,7 @@ async function showNotification({ title, message, iconUrl }) {
 const MIRROR_NODE_API = 'https://mainnet-public.mirrornode.hedera.com/api/v1';
 const DEXSCREENER_API = 'https://api.dexscreener.com/latest';
 
-async function getTokenFromMirrorNode(tokenId) {
+async function getTokenFromMirrorNode(tokenId: string): Promise<TokenInfo> {
   try {
     const url = `${MIRROR_NODE_API}/tokens/${tokenId}`;
     const data = await fetchWithTimeout(url);
@@ -187,7 +254,7 @@ async function getTokenFromMirrorNode(tokenId) {
   }
 }
 
-async function getTokenFromDexscreener(evmAddress) {
+async function getTokenFromDexscreener(evmAddress: string): Promise<MarketData | null> {
   try {
     const url = `${DEXSCREENER_API}/dex/tokens/${evmAddress}`;
     const data = await fetchWithTimeout(url);
@@ -196,7 +263,7 @@ async function getTokenFromDexscreener(evmAddress) {
       return null;
     }
 
-    const pair = data.pairs.sort((a, b) =>
+    const pair = data.pairs.sort((a: any, b: any) =>
       (parseFloat(b.liquidity?.usd) || 0) - (parseFloat(a.liquidity?.usd) || 0)
     )[0];
 
@@ -216,7 +283,7 @@ async function getTokenFromDexscreener(evmAddress) {
   }
 }
 
-async function analyzeToken(tokenId) {
+async function analyzeToken(tokenId: string): Promise<any> {
   try {
     const tokenInfo = await getTokenFromMirrorNode(tokenId);
 
@@ -241,7 +308,7 @@ async function analyzeToken(tokenId) {
   }
 }
 
-async function saveRecentCheck(tokenData) {
+async function saveRecentCheck(tokenData: any): Promise<void> {
   const { recentChecks = [] } = await chrome.storage.local.get('recentChecks');
 
   const newCheck = {
@@ -256,7 +323,7 @@ async function saveRecentCheck(tokenData) {
 }
 
 // Message listener
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   (async () => {
     try {
       // Price tracking features
@@ -277,7 +344,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (portfolio.length === 0) {
           sendResponse({ success: true, data: { totalValue: 0, positions: [] } });
         } else {
-          const tokens = portfolio.map(p => ({ address: p.address, chain: p.chain }));
+          const tokens = portfolio.map((p: any) => ({ address: p.address, chain: p.chain }));
           const prices = await priceTracker.getBatchPrices(tokens);
           const portfolioValue = priceTracker.calculatePortfolioValue(portfolio, prices);
           sendResponse({ success: true, data: portfolioValue });
@@ -298,7 +365,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       else if (message.action === 'removeFromPortfolio') {
         const { portfolio = [] } = await chrome.storage.local.get('portfolio');
-        const updated = portfolio.filter(p =>
+        const updated = portfolio.filter((p: any) =>
           !(p.address === message.address && p.chain === message.chain)
         );
         await chrome.storage.local.set({ portfolio: updated });
@@ -306,7 +373,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       else if (message.action === 'updatePortfolioPosition') {
         const { portfolio = [] } = await chrome.storage.local.get('portfolio');
-        const index = portfolio.findIndex(p =>
+        const index = portfolio.findIndex((p: any) =>
           p.address === message.address && p.chain === message.chain
         );
         if (index !== -1) {
@@ -338,7 +405,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       else if (message.action === 'removePriceAlert') {
         const { priceAlerts = [] } = await chrome.storage.local.get('priceAlerts');
-        const updated = priceAlerts.filter(a => a.id !== message.alertId);
+        const updated = priceAlerts.filter((a: any) => a.id !== message.alertId);
         await chrome.storage.local.set({ priceAlerts: updated });
         sendResponse({ success: true });
       }
@@ -374,7 +441,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       else if (message.action === 'removeFromWhitelist') {
         const { whitelist = [] } = await chrome.storage.local.get('whitelist');
-        const updated = whitelist.filter(d => d !== message.domain);
+        const updated = whitelist.filter((d: string) => d !== message.domain);
         await chrome.storage.local.set({ whitelist: updated });
         sendResponse({ success: true });
       }
@@ -402,7 +469,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       else if (message.action === 'addToWatchlist') {
         const { watchlist = [] } = await chrome.storage.local.get('watchlist');
-        if (!watchlist.find(t => t.tokenId === message.tokenId)) {
+        if (!watchlist.find((t: any) => t.tokenId === message.tokenId)) {
           watchlist.push({
             tokenId: message.tokenId,
             name: message.name,
@@ -415,7 +482,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       else if (message.action === 'removeFromWatchlist') {
         const { watchlist = [] } = await chrome.storage.local.get('watchlist');
-        const updated = watchlist.filter(t => t.tokenId !== message.tokenId);
+        const updated = watchlist.filter((t: any) => t.tokenId !== message.tokenId);
         await chrome.storage.local.set({ watchlist: updated });
         sendResponse({ success: true });
       }
@@ -430,7 +497,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       else {
         sendResponse({ success: false, error: 'Unknown action' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Background Error:', error);
       sendResponse({ success: false, error: error.message });
     }
@@ -475,7 +542,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
     // Open welcome page
     chrome.tabs.create({
-      url: 'https://github.com/tokenware/welcome'
+      url: 'https://github.com/openware/welcome'
     });
   }
 });
@@ -488,14 +555,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // Check all price alerts
-async function checkPriceAlerts() {
+async function checkPriceAlerts(): Promise<void> {
   try {
     const { priceAlerts = [], settings = {} } = await chrome.storage.local.get(['priceAlerts', 'settings']);
 
     if (!settings.priceAlertsEnabled || priceAlerts.length === 0) return;
 
     // Get unique tokens
-    const tokens = [...new Set(priceAlerts.map(a => `${a.chain}:${a.address}`))];
+    const tokens = [...new Set(priceAlerts.map((a: any) => `${a.chain}:${a.address}`))];
     const tokensToFetch = tokens.map(t => {
       const [chain, address] = t.split(':');
       return { chain, address };
@@ -510,7 +577,7 @@ async function checkPriceAlerts() {
     for (const alert of priceAlerts) {
       if (alert.triggered) continue;
 
-      const priceData = prices.find(p =>
+      const priceData = prices.find((p: any) =>
         p.address === alert.address && p.chain === alert.chain && p.data
       );
 
@@ -534,7 +601,7 @@ async function checkPriceAlerts() {
         });
 
         // Mark alert as triggered
-        const index = priceAlerts.findIndex(a => a.id === alert.id);
+        const index = priceAlerts.findIndex((a: any) => a.id === alert.id);
         if (index !== -1) {
           priceAlerts[index].triggered = true;
           priceAlerts[index].triggeredAt = new Date().toISOString();
@@ -549,4 +616,4 @@ async function checkPriceAlerts() {
   }
 }
 
-console.log('TokenWare v2.0 - Security Suite Loaded');
+console.log('OpenWare v2.0 - Security Suite Loaded');
