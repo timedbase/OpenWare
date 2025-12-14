@@ -501,9 +501,5 @@ class PriceTracker {
   }
 }
 
-// Export for use in other scripts
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = PriceTracker;
-}
-
+// Export for browser extension use
 export { PriceTracker, PriceData, Alert, Holding, Position, PortfolioValue };

@@ -362,7 +362,7 @@ class SecurityEngine {
         threatLevel,
         riskScore: Math.min(riskScore, 100),
         risks,
-        contractData,
+        contractData: contractData || undefined,
         timestamp: new Date().toISOString()
       };
 
@@ -529,9 +529,5 @@ class SecurityEngine {
   }
 }
 
-// Export for use in other scripts
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = SecurityEngine;
-}
-
+// Export for browser extension use
 export { SecurityEngine, Risk, Analysis, ContractData };

@@ -1,9 +1,6 @@
 // OpenWare Background Service Worker - v2.0
 // Multi-chain security and threat detection
 
-import type { SecurityEngine } from './security-engine';
-import type { PriceTracker } from './price-tracker';
-
 // Types
 interface Analysis {
   url?: string;
@@ -69,6 +66,8 @@ interface MarketData {
 // Import security engine and price tracker (using importScripts for service worker)
 declare const SecurityEngine: new () => any;
 declare const PriceTracker: new () => any;
+declare function importScripts(...urls: string[]): void;
+
 importScripts('security-engine.js');
 importScripts('price-tracker.js');
 
@@ -562,8 +561,8 @@ async function checkPriceAlerts(): Promise<void> {
     if (!settings.priceAlertsEnabled || priceAlerts.length === 0) return;
 
     // Get unique tokens
-    const tokens = [...new Set(priceAlerts.map((a: any) => `${a.chain}:${a.address}`))];
-    const tokensToFetch = tokens.map(t => {
+    const tokens = [...new Set(priceAlerts.map((a: any) => `${a.chain}:${a.address}`))] as string[];
+    const tokensToFetch = tokens.map((t: string) => {
       const [chain, address] = t.split(':');
       return { chain, address };
     });

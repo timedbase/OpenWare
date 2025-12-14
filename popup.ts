@@ -56,8 +56,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     if (sectionName === 'scanner') loadCurrentSiteSecurity();
     if (sectionName === 'stats') loadStats();
     if (sectionName === 'settings') loadSettings();
-    if (sectionName === 'portfolio') loadPortfolio();
-    if (sectionName === 'alerts') loadPriceAlerts();
+    // Portfolio and alerts loading would be implemented here
+    // if (sectionName === 'portfolio') loadPortfolio();
+    // if (sectionName === 'alerts') loadPriceAlerts();
   });
 });
 
